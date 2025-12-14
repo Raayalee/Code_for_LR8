@@ -24,7 +24,7 @@ public class Main {
         DataValidator validator = new DataValidator();
         SearchService searchService = new SearchService();
 
-        // Меню і команди
+        // Меню та команди
         Menu mainMenu = new Menu("Mobile tariff management system");
 
         mainMenu.addCommand("1", new CreateTariffCommand(tariffs, factory, validator));
