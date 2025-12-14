@@ -1,22 +1,20 @@
-package command.impl;
+package command;
 
-import command.Command;
 import model.Tariff;
 import service.DataValidator;
 import service.SearchService;
 
 import java.util.List;
 
-/**
- * Пошук тарифів у ціновому діапазоні.
- * parameters: min max
- */
 public class FindTariffsCommand implements Command {
+
     private final List<Tariff> tariffs;
     private final SearchService searchService;
     private final DataValidator validator;
 
-    public FindTariffsCommand(List<Tariff> tariffs, SearchService searchService, DataValidator validator) {
+    public FindTariffsCommand(List<Tariff> tariffs,
+                              SearchService searchService,
+                              DataValidator validator) {
         this.tariffs = tariffs;
         this.searchService = searchService;
         this.validator = validator;
@@ -29,31 +27,42 @@ public class FindTariffsCommand implements Command {
 
     @Override
     public void execute(String parameters) {
+        System.out.print(process(parameters));
+    }
+
+    public String process(String parameters) {
         try {
             if (parameters == null || parameters.trim().isEmpty()) {
-                System.out.println("Provide min and max price. Example: 100 500");
-                return;
+                return "Provide min and max price. Example: 100 500\n";
             }
+
             String[] parts = parameters.trim().split("\\s+");
             if (parts.length < 2) {
-                System.out.println("Need two numbers: min max");
-                return;
+                return "Need two numbers: min max\n";
             }
+
             double min = Double.parseDouble(parts[0]);
             double max = Double.parseDouble(parts[1]);
+
             if (!validator.validatePriceRange(min, max)) {
-                System.out.println("Invalid price range.");
-                return;
+                return "Invalid price range.\n";
             }
-            List<Tariff> found = searchService.filterByPriceRange(tariffs, min, max);
+
+            List<Tariff> found =
+                    searchService.filterByPriceRange(tariffs, min, max);
+
             if (found.isEmpty()) {
-                System.out.println("No tariffs in the given range.");
-            } else {
-                System.out.println("Found tariffs:");
-                found.forEach(System.out::println);
+                return "No tariffs in the given range.\n";
             }
+
+            StringBuilder sb = new StringBuilder("Found tariffs:\n");
+            for (Tariff t : found) {
+                sb.append(t).append("\n");
+            }
+            return sb.toString();
+
         } catch (Exception e) {
-            System.out.println("Error while searching: " + e.getMessage());
+            return "Error while searching: " + e.getMessage() + "\n";
         }
     }
 }

@@ -1,6 +1,6 @@
 package mainpack;
 
-import command.impl.*;
+import command.*;
 import factory.TariffFactory;
 import menu.Menu;
 import model.Client;
@@ -23,10 +23,6 @@ public class Main {
         TariffFactory factory = new TariffFactory();
         DataValidator validator = new DataValidator();
         SearchService searchService = new SearchService();
-
-        // --- Ніяких початкових тарифів ---
-        // --- Ніяких клієнтів ---
-        // --- Ніякої автопідписки ---
 
         // Меню і команди
         Menu mainMenu = new Menu("Mobile tariff management system");

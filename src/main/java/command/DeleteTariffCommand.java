@@ -1,6 +1,5 @@
-package command.impl;
+package command;
 
-import command.Command;
 import model.Client;
 import model.Tariff;
 import model.TariffType;
@@ -18,11 +17,16 @@ public class DeleteTariffCommand implements Command {
 
     private final List<Tariff> tariffs;
     private final List<Client> clients;
-    private final Scanner scanner = new Scanner(System.in);
+    private final Scanner scanner;
 
-    public DeleteTariffCommand(List<Tariff> tariffs, List<Client> clients) {
+    public DeleteTariffCommand(List<Tariff> tariffs, List<Client> clients, Scanner scanner) {
         this.tariffs = tariffs;
         this.clients = clients;
+        this.scanner = scanner;
+    }
+
+    public DeleteTariffCommand(List<Tariff> tariffs, List<Client> clients) {
+        this(tariffs, clients, new Scanner(System.in));
     }
 
     @Override
@@ -32,12 +36,15 @@ public class DeleteTariffCommand implements Command {
 
     @Override
     public void execute(String parameters) {
+
         if (parameters == null || parameters.trim().isEmpty()) {
             System.out.println("Provide tariff name to delete.");
             return;
         }
 
         String name = parameters.trim();
+
+        // Пошук тарифу
         Optional<Tariff> targetOpt = tariffs.stream()
                 .filter(t -> t.getName().equalsIgnoreCase(name))
                 .findFirst();
@@ -49,7 +56,7 @@ public class DeleteTariffCommand implements Command {
 
         Tariff target = targetOpt.get();
 
-        // Кількість клієнтів на цьому тарифі
+        // Підрахунок клієнтів
         long subscriberCount = clients.stream()
                 .filter(c -> c.getCurrentTariff() != null &&
                         c.getCurrentTariff().getName().equalsIgnoreCase(name))
@@ -57,14 +64,12 @@ public class DeleteTariffCommand implements Command {
 
         System.out.printf("Tariff '%s' selected. Subscribers: %d%n", name, subscriberCount);
 
-        // Цикл підтвердження
-        boolean confirmed = false;
+        // Підтвердження
         while (true) {
             System.out.print("Are you sure you want to delete this tariff? (y/n): ");
             String input = scanner.nextLine().trim().toLowerCase();
 
             if (input.equals("y") || input.equals("yes")) {
-                confirmed = true;
                 break;
             } else if (input.equals("n") || input.equals("no")) {
                 System.out.println("Deletion canceled.");
@@ -74,9 +79,7 @@ public class DeleteTariffCommand implements Command {
             }
         }
 
-        if (!confirmed) return;
-
-        // Знаходимо BASIC тариф
+        // Пошук BASIC тарифу
         Optional<Tariff> basicOpt = tariffs.stream()
                 .filter(t -> t.getType() == TariffType.BASIC)
                 .findFirst();
@@ -88,7 +91,7 @@ public class DeleteTariffCommand implements Command {
 
         Tariff basicTariff = basicOpt.get();
 
-        // Переводимо клієнтів на BASIC
+        // Переведення клієнтів
         for (Client c : clients) {
             if (c.getCurrentTariff() != null &&
                     c.getCurrentTariff().getName().equalsIgnoreCase(name)) {
@@ -96,7 +99,7 @@ public class DeleteTariffCommand implements Command {
             }
         }
 
-        // Видаляємо тариф
+        // Видалення тарифу
         Iterator<Tariff> it = tariffs.iterator();
         while (it.hasNext()) {
             if (it.next().getName().equalsIgnoreCase(name)) {
@@ -105,7 +108,11 @@ public class DeleteTariffCommand implements Command {
             }
         }
 
-        System.out.printf("Tariff '%s' deleted. All subscribers moved to BASIC tariff '%s'.%n",
-                name, basicTariff.getName());
+        System.out.printf(
+                "Tariff '%s' deleted. All subscribers moved to BASIC tariff '%s'.%n",
+                name, basicTariff.getName()
+        );
     }
+
+
 }
