@@ -9,11 +9,17 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Scanner;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 /**
  * Видалення тарифу за назвою з підтвердженням.
  * Після видалення всіх клієнтів тарифу переводить на BASIC.
  */
 public class DeleteTariffCommand implements Command {
+
+    private static final Logger logger =
+            LogManager.getLogger(DeleteTariffCommand.class);
 
     private final List<Tariff> tariffs;
     private final List<Client> clients;
@@ -37,7 +43,10 @@ public class DeleteTariffCommand implements Command {
     @Override
     public void execute(String parameters) {
 
+        logger.info("DeleteTariffCommand started");
+
         if (parameters == null || parameters.trim().isEmpty()) {
+            logger.warn("No tariff name provided for deletion");
             System.out.println("Provide tariff name to delete.");
             return;
         }
@@ -50,6 +59,7 @@ public class DeleteTariffCommand implements Command {
                 .findFirst();
 
         if (targetOpt.isEmpty()) {
+            logger.warn("Tariff not found: {}", name);
             System.out.println("Tariff not found: " + name);
             return;
         }
@@ -62,6 +72,11 @@ public class DeleteTariffCommand implements Command {
                         c.getCurrentTariff().getName().equalsIgnoreCase(name))
                 .count();
 
+        logger.info(
+                "Tariff '{}' selected for deletion. Subscribers count: {}",
+                name, subscriberCount
+        );
+
         System.out.printf("Tariff '%s' selected. Subscribers: %d%n", name, subscriberCount);
 
         // Підтвердження
@@ -70,11 +85,14 @@ public class DeleteTariffCommand implements Command {
             String input = scanner.nextLine().trim().toLowerCase();
 
             if (input.equals("y") || input.equals("yes")) {
+                logger.info("Deletion confirmed for tariff '{}'", name);
                 break;
             } else if (input.equals("n") || input.equals("no")) {
+                logger.info("Deletion canceled by user for tariff '{}'", name);
                 System.out.println("Deletion canceled.");
                 return;
             } else {
+                logger.warn("Invalid confirmation input: '{}'", input);
                 System.out.println("Invalid input. Please type 'y' or 'n'.");
             }
         }
@@ -85,6 +103,8 @@ public class DeleteTariffCommand implements Command {
                 .findFirst();
 
         if (basicOpt.isEmpty()) {
+            // КРИТИЧНА СИТУАЦІЯ → піде на email
+            logger.error("No BASIC tariff found. Cannot transfer clients.");
             System.out.println("No BASIC tariff available. Cannot transfer clients.");
             return;
         }
@@ -108,11 +128,14 @@ public class DeleteTariffCommand implements Command {
             }
         }
 
+        logger.info(
+                "Tariff '{}' deleted successfully. All subscribers moved to BASIC tariff '{}'",
+                name, basicTariff.getName()
+        );
+
         System.out.printf(
                 "Tariff '%s' deleted. All subscribers moved to BASIC tariff '%s'.%n",
                 name, basicTariff.getName()
         );
     }
-
-
 }

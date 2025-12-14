@@ -11,18 +11,26 @@ import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 /**
  * Створення тарифу у два етапи:
  * 1) name;TYPE;monthlyFee;minutes;internetGB
- * 2) key=value;key=value для додаткових параметрів (крім BASIC)
+ * 2) додаткові параметри (для не BASIC тарифів)
  */
 public class CreateTariffCommand implements Command {
+
+    private static final Logger logger =
+            LogManager.getLogger(CreateTariffCommand.class);
 
     private final List<Tariff> tariffs;
     private final TariffFactory factory;
     private final DataValidator validator;
 
-    public CreateTariffCommand(List<Tariff> tariffs, TariffFactory factory, DataValidator validator) {
+    public CreateTariffCommand(List<Tariff> tariffs,
+                               TariffFactory factory,
+                               DataValidator validator) {
         this.tariffs = tariffs;
         this.factory = factory;
         this.validator = validator;
@@ -30,20 +38,25 @@ public class CreateTariffCommand implements Command {
 
     @Override
     public String getDescription() {
-        return "Create new tariff in two steps: Step1: name;TYPE;monthlyFee;minutes;internetGB, Step2: key=value;key=value";
+        return "Create new tariff in two steps";
     }
 
     @Override
     public void execute(String parameters) {
+
+        logger.info("CreateTariffCommand started");
+
         if (parameters == null || parameters.trim().isEmpty()) {
+            logger.warn("Empty parameters provided");
             System.out.println("Enter: name;TYPE;monthlyFee;minutes;internetGB");
             return;
         }
 
         try {
-            // --- Етап 1 ---
+            // ===== ЕТАП 1 =====
             String[] parts = parameters.split(";");
             if (parts.length < 5) {
+                logger.warn("Invalid parameter format: {}", parameters);
                 System.out.println("Invalid format. Use: name;TYPE;monthlyFee;minutes;internetGB");
                 return;
             }
@@ -55,6 +68,7 @@ public class CreateTariffCommand implements Command {
             double internetGB = Double.parseDouble(parts[4].trim());
 
             if (!validator.validateTariff(name, fee)) {
+                logger.warn("Tariff validation failed: name={}, fee={}", name, fee);
                 System.out.println("Tariff validation failed. Check name or fee.");
                 return;
             }
@@ -66,16 +80,18 @@ public class CreateTariffCommand implements Command {
             if (type == TariffType.BASIC) {
                 Tariff tariff = factory.createTariff(type, name, fee, extraParams);
                 tariffs.add(tariff);
+
+                logger.info("BASIC tariff created successfully: {}", tariff);
+
                 System.out.println("Tariff created successfully:");
                 System.out.println(tariff);
                 return;
             }
 
-            // --- Показати меню параметрів ---
+            // ===== ЕТАП 2 =====
             showParameterMenu(type);
-
-            // --- Етап 2 ---
             System.out.println("Enter parameters in format: value;value;value");
+
             Scanner scanner = new Scanner(System.in);
             String paramInput = scanner.nextLine();
 
@@ -85,11 +101,15 @@ public class CreateTariffCommand implements Command {
             Tariff tariff = factory.createTariff(type, name, fee, extraParams);
             tariffs.add(tariff);
 
+            logger.info("{} tariff created successfully: {}", type, tariff);
+
             System.out.println("Tariff created successfully:");
             System.out.println(tariff);
 
         } catch (Exception e) {
-            System.out.println("Error creating tariff: " + e.getMessage());
+            // КРИТИЧНА ПОМИЛКА → файл + email
+            logger.error("Error while creating tariff", e);
+            System.out.println("Error creating tariff. See logs for details.");
         }
     }
 
@@ -105,7 +125,7 @@ public class CreateTariffCommand implements Command {
         try {
             return Double.parseDouble(rawFee);
         } catch (NumberFormatException e) {
-            throw new IllegalArgumentException("Monthly fee must be a number. Got: " + rawFee);
+            throw new IllegalArgumentException("Monthly fee must be a number: " + rawFee);
         }
     }
 
@@ -122,7 +142,7 @@ public class CreateTariffCommand implements Command {
             case BUSINESS -> {
                 System.out.println("roaming (boolean)");
                 System.out.println("prioritySupport (boolean)");
-                System.out.println("accountManager (boolean)");
+                System.out.println("dedicatedAccountManager (boolean)");
             }
             case STUDENT -> {
                 System.out.println("discountPercent (double)");
